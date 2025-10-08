@@ -9,7 +9,7 @@ const getEnv = (key: string) => {
   if (typeof import.meta !== 'undefined' && import.meta.env) {
     return import.meta.env[key];
   }
-  return process.env[key];
+  return undefined;
 };
 
 const firebaseConfig = {

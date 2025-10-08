@@ -1,4 +1,4 @@
-import { CheckCircle2, TrendingUp, Zap, ArrowRight, DollarSign } from 'lucide-react';
+import { CheckCircle2, TrendingUp, ArrowRight, DollarSign } from 'lucide-react';
 
 function App() {
   return (
