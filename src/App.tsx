@@ -9,6 +9,7 @@ import { ScanProcessing } from './pages/ScanProcessing';
 import { ScanResults } from './pages/ScanResults';
 import { Pricing } from './pages/Pricing';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import AICoachDashboard from './components/AICoach/AICoachDashboard';
 
 function App() {
   const { user, loading } = useAuth();
@@ -62,6 +63,14 @@ function App() {
         element={
           <ProtectedRoute>
             <ScanResults />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/ai-coach"
+        element={
+          <ProtectedRoute>
+            <AICoachDashboard />
           </ProtectedRoute>
         }
       />

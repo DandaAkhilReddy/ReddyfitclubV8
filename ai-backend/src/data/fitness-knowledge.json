@@ -1,0 +1,191 @@
+[
+  {
+    "id": "ex-pushup-001",
+    "type": "exercise",
+    "content": "Push-ups are a fundamental bodyweight exercise targeting chest, triceps, and shoulders. Beginner variation: knee push-ups. Start with 3 sets of 8-12 reps, rest 60 seconds. Form: hands shoulder-width apart, keep core tight, lower until chest nearly touches ground, push back up. Common mistakes: sagging hips, flaring elbows too wide (keep at 45-degree angle).",
+    "metadata": {
+      "muscle": "chest",
+      "difficulty": "beginner",
+      "equipment": ["bodyweight"]
+    }
+  },
+  {
+    "id": "ex-squat-001",
+    "type": "exercise",
+    "content": "Barbell back squat is the king of leg exercises. Targets quads, glutes, hamstrings, and core. Start with bodyweight to learn form. Progression: goblet squat → barbell squat. Sets: 3-4, Reps: 8-12, Rest: 90-120 seconds. Form cues: feet shoulder-width apart, toes slightly out, break at hips and knees simultaneously, keep chest up, knees track over toes, squat to parallel or below. Safety: always use safety bars or squat in a rack.",
+    "metadata": {
+      "muscle": "legs",
+      "difficulty": "intermediate",
+      "equipment": ["barbell", "squat rack"]
+    }
+  },
+  {
+    "id": "ex-deadlift-001",
+    "type": "exercise",
+    "content": "Conventional deadlift builds total body strength, especially posterior chain (back, glutes, hamstrings). Technical lift requiring proper form. Start light: 3 sets of 5 reps, rest 2-3 minutes. Form: feet hip-width, grip just outside legs, hinge at hips, flat back, pull bar close to body, drive through heels, finish with hips and knees locked. NEVER round your back. Consider hiring a coach for first sessions.",
+    "metadata": {
+      "muscle": "back",
+      "difficulty": "advanced",
+      "equipment": ["barbell"]
+    }
+  },
+  {
+    "id": "ex-pullup-001",
+    "type": "exercise",
+    "content": "Pull-ups are the ultimate back and bicep builder. Variations: chin-ups (underhand grip, easier), neutral grip. Progression: assisted pull-ups → negative pull-ups → full pull-ups. Target: 3 sets of 5-12 reps, rest 90 seconds. Form: hang from bar, pull until chin over bar, lower with control. Easier variation: inverted rows. Harder: weighted pull-ups.",
+    "metadata": {
+      "muscle": "back",
+      "difficulty": "intermediate",
+      "equipment": ["pull-up bar"]
+    }
+  },
+  {
+    "id": "ex-plank-001",
+    "type": "exercise",
+    "content": "Plank is the most effective core stability exercise. Builds abs, obliques, and lower back strength. Sets: 3-4, Duration: 30-60 seconds, rest 60 seconds. Form: forearms on ground, elbows under shoulders, body in straight line from head to heels, squeeze glutes, don't let hips sag or pike up. Progressions: side plank, plank with leg lift, weighted plank.",
+    "metadata": {
+      "muscle": "core",
+      "difficulty": "beginner",
+      "equipment": ["bodyweight"]
+    }
+  },
+  {
+    "id": "ex-lunge-001",
+    "type": "exercise",
+    "content": "Walking lunges develop leg strength and balance. Targets quads, glutes, hamstrings. Sets: 3, Reps: 10-12 per leg, rest 60 seconds. Form: step forward, lower back knee toward ground (don't touch), front knee at 90 degrees, keep torso upright, push through front heel to return. Variations: reverse lunges (easier on knees), Bulgarian split squats (advanced).",
+    "metadata": {
+      "muscle": "legs",
+      "difficulty": "beginner",
+      "equipment": ["bodyweight", "dumbbells"]
+    }
+  },
+  {
+    "id": "wp-fullbody-beginner",
+    "type": "workout_plan",
+    "content": "Full Body Beginner Workout (3x per week): Warm-up 5min cardio + dynamic stretches. Main: 1) Goblet Squats 3x10, 2) Push-ups 3x8-12, 3) Dumbbell Rows 3x10, 4) Lunges 3x10 each leg, 5) Plank 3x30-45s. Cool-down: 5min stretch. Progressive overload: add 1 rep per week or increase weight by 5lbs when you hit top of rep range.",
+    "metadata": {
+      "difficulty": "beginner",
+      "equipment": ["dumbbells"],
+      "tags": ["full_body", "strength"]
+    }
+  },
+  {
+    "id": "wp-upperlower-intermediate",
+    "type": "workout_plan",
+    "content": "Upper/Lower Split (4x per week): Upper Day: 1) Bench Press 4x8-10, 2) Bent-Over Rows 4x8-10, 3) Overhead Press 3x10, 4) Pull-ups 3x max, 5) Bicep Curls 3x12, 6) Tricep Extensions 3x12. Lower Day: 1) Squats 4x8-10, 2) Romanian Deadlifts 3x10, 3) Leg Press 3x12, 4) Leg Curls 3x12, 5) Calf Raises 4x15. Rest 1-2 days between sessions.",
+    "metadata": {
+      "difficulty": "intermediate",
+      "equipment": ["barbell", "dumbbells", "cable machine"],
+      "tags": ["split", "hypertrophy"]
+    }
+  },
+  {
+    "id": "nutrition-protein-001",
+    "type": "nutrition",
+    "content": "Protein intake for muscle building: 1.6-2.2g per kg bodyweight daily. Sources: chicken breast (31g per 100g), salmon (25g per 100g), eggs (6g per egg), Greek yogurt (10g per 100g), whey protein (25g per scoop). Distribute protein across 3-5 meals. Post-workout window: consume 20-40g protein within 2 hours for optimal muscle protein synthesis.",
+    "metadata": {
+      "tags": ["protein", "muscle_gain", "nutrition"]
+    }
+  },
+  {
+    "id": "nutrition-preworkout-001",
+    "type": "nutrition",
+    "content": "Pre-workout nutrition: eat 1-3 hours before training. Ideal meal: 30-40g carbs (oats, rice, fruit), 20-30g protein (chicken, fish, whey), low fat (digests slower). Examples: oatmeal with banana and protein powder, chicken rice bowl, Greek yogurt with berries. Avoid: high-fiber foods, high-fat meals (slow digestion), new foods (risk of GI distress).",
+    "metadata": {
+      "tags": ["pre_workout", "performance", "nutrition"]
+    }
+  },
+  {
+    "id": "nutrition-postworkout-001",
+    "type": "nutrition",
+    "content": "Post-workout nutrition: replenish glycogen and start muscle repair. Within 2 hours: 40-60g fast-digesting carbs (white rice, potatoes, fruit), 20-40g protein (whey, chicken). Carb-to-protein ratio: 2:1 or 3:1. Examples: protein shake with banana, chicken with rice, Greek yogurt with granola. Hydration: drink 16-24oz water per pound lost during workout.",
+    "metadata": {
+      "tags": ["post_workout", "recovery", "nutrition"]
+    }
+  },
+  {
+    "id": "meal-chickenbowl",
+    "type": "meal",
+    "content": "Chicken Rice Bowl (Meal Prep Staple): 6oz grilled chicken breast (280 cal, 52g protein), 1 cup cooked white rice (200 cal, 45g carbs), 1 cup broccoli (50 cal, 5g fiber), 1 tbsp olive oil (120 cal, 14g fat). Total: 650 calories, 52g protein, 48g carbs, 16g fat. Perfect post-workout meal. Prep 5 servings on Sunday for the week.",
+    "metadata": {
+      "calories": 650,
+      "protein": 52,
+      "tags": ["meal_prep", "high_protein", "post_workout"]
+    }
+  },
+  {
+    "id": "meal-proteinshake",
+    "type": "meal",
+    "content": "High-Protein Smoothie: 1 scoop whey protein (120 cal, 25g protein), 1 banana (100 cal, 27g carbs), 2 tbsp peanut butter (200 cal, 16g fat, 8g protein), 1 cup almond milk (40 cal), handful spinach (0 cal, vitamins). Blend. Total: 460 calories, 33g protein, 30g carbs, 18g fat. Ideal breakfast or post-workout. Customize with berries, oats, or Greek yogurt.",
+    "metadata": {
+      "calories": 460,
+      "protein": 33,
+      "tags": ["quick", "high_protein", "breakfast"]
+    }
+  },
+  {
+    "id": "cardio-hiit-001",
+    "type": "exercise",
+    "content": "HIIT Cardio Protocol: 20-30 minutes total. Structure: 5min warm-up, then 8-10 rounds of 30 seconds max effort + 90 seconds active recovery, 5min cool-down. Exercises: sprints, bike, rowing, jump rope, burpees. Benefits: burns more calories than steady-state, improves cardiovascular fitness, preserves muscle. Frequency: 2-3x per week, never on consecutive days.",
+    "metadata": {
+      "difficulty": "intermediate",
+      "equipment": ["bodyweight"],
+      "tags": ["cardio", "fat_loss", "conditioning"]
+    }
+  },
+  {
+    "id": "recovery-001",
+    "type": "workout_plan",
+    "content": "Active Recovery Day: 20-30min low-intensity activity (walking, light cycling, yoga). Benefits: improves blood flow, reduces soreness, maintains movement patterns. Include mobility work: hip flexor stretches, thoracic spine rotations, shoulder dislocations with band. Foam rolling: quads, hamstrings, lats, IT band (1-2min each). Optional: sauna or cold plunge for recovery. Schedule 1-2 active recovery days per week.",
+    "metadata": {
+      "difficulty": "beginner",
+      "tags": ["recovery", "mobility", "flexibility"]
+    }
+  },
+  {
+    "id": "ex-benchpress-001",
+    "type": "exercise",
+    "content": "Barbell Bench Press: primary chest exercise. Sets: 3-5, Reps: 6-12, Rest: 2-3 minutes. Form: lie on bench, feet flat on floor, arch lower back slightly, grip bar slightly wider than shoulders, unrack, lower to mid-chest with elbows at 45 degrees, press up. Safety: ALWAYS use a spotter or safety bars. Progressive overload: add 2.5-5lbs per week. Variations: incline (upper chest), decline (lower chest), dumbbell press.",
+    "metadata": {
+      "muscle": "chest",
+      "difficulty": "intermediate",
+      "equipment": ["barbell", "bench"]
+    }
+  },
+  {
+    "id": "ex-overheadpress-001",
+    "type": "exercise",
+    "content": "Standing Overhead Press (Military Press): best shoulder builder. Sets: 3-4, Reps: 6-10, Rest: 2-3 minutes. Form: feet hip-width, bar on front shoulders, elbows slightly forward, press bar overhead in straight line, lock out with arms by ears, control down. Engage core throughout. Common mistake: leaning back excessively (compress spine). Alternate: seated dumbbell press (easier), push press (uses leg drive).",
+    "metadata": {
+      "muscle": "shoulders",
+      "difficulty": "intermediate",
+      "equipment": ["barbell"]
+    }
+  },
+  {
+    "id": "nutrition-mealprep-001",
+    "type": "nutrition",
+    "content": "Meal Prep Strategy for Fitness: Pick 1 protein (chicken, ground turkey, salmon), 1 carb (rice, sweet potato, quinoa), 2-3 veggies (broccoli, peppers, spinach). Sunday prep: cook 10-15 meals for the week. Storage: glass containers, fridge (4 days), freezer (2-3 months). Portions: use hand as guide (palm-sized protein, fist-sized carbs, thumb-sized fats). Calculate macros once, then repeat successful meals.",
+    "metadata": {
+      "tags": ["meal_prep", "nutrition_strategy", "time_saving"]
+    }
+  },
+  {
+    "id": "wp-ppl-advanced",
+    "type": "workout_plan",
+    "content": "Push/Pull/Legs Split (6x per week): PUSH (Chest/Shoulders/Triceps): 1) Bench Press 4x6-8, 2) Incline Dumbbell Press 3x10, 3) Overhead Press 4x8, 4) Lateral Raises 3x12, 5) Tricep Dips 3x10. PULL (Back/Biceps): 1) Deadlifts 4x5, 2) Pull-ups 4x8-10, 3) Barbell Rows 4x8, 4) Face Pulls 3x15, 5) Hammer Curls 3x12. LEGS: 1) Squats 4x6-8, 2) Leg Press 3x12, 3) Romanian Deadlifts 3x10, 4) Leg Curls 3x12, 5) Calf Raises 4x15. Repeat twice per week.",
+    "metadata": {
+      "difficulty": "advanced",
+      "equipment": ["full_gym"],
+      "tags": ["hypertrophy", "bodybuilding", "volume"]
+    }
+  },
+  {
+    "id": "nutrition-calories-001",
+    "type": "nutrition",
+    "content": "Calorie Calculation: 1) Find BMR (Mifflin-St Jeor): Men = 10×weight(kg) + 6.25×height(cm) - 5×age + 5. Women = same - 161. 2) Multiply by activity: sedentary (1.2), light (1.375), moderate (1.55), active (1.725), very active (1.9). 3) Adjust for goals: fat loss (-500 cal), maintain (0), muscle gain (+300 cal). Track for 2 weeks, adjust based on results. Don't go below BMR.",
+    "metadata": {
+      "tags": ["calories", "nutrition_basics", "tdee"]
+    }
+  }
+]

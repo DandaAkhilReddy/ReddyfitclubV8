@@ -1,0 +1,200 @@
+# CodeRabbit AI Configuration - ReddyFit Club V8
+# HIPAA-Compliant Healthcare Application
+
+language: "en-US"
+
+reviews:
+  profile: "assertive"  # Strict reviews for healthcare app
+  high_level_summary: true
+  poem: false
+  review_status: true
+
+  # Auto-review all PRs
+  auto_review:
+    enabled: true
+    drafts: true
+    base_branches:
+      - main
+      - develop
+      - staging
+
+  # High-priority HIPAA compliance checks
+  path_filters:
+    # Critical PHI handling code (maximum scrutiny)
+    - path: "src/lib/firestore/**"
+      instructions: |
+        CRITICAL: This code handles Protected Health Information (PHI).
+        - Verify all Firestore queries use proper user ID filtering
+        - Ensure no PHI leaks in error messages or logs
+        - Confirm audit logging for all PHI access
+        - Check RBAC enforcement (user can only access own data)
+        - Validate encryption at rest and in transit
+
+    - path: "src/lib/audit/**"
+      instructions: |
+        CRITICAL: Audit logging for HIPAA compliance.
+        - Ensure all PHI access is logged
+        - Verify log retention (7 years)
+        - Check log immutability (no edits/deletes)
+        - Validate required audit fields (who, what, when, where)
+
+    - path: "src/lib/semanticKernel/**"
+      instructions: |
+        CRITICAL: AI agents processing PHI.
+        - Verify no PHI in prompts sent to AI models
+        - Confirm data minimization (only necessary PHI)
+        - Check Supermemory encryption
+        - Validate consent before processing
+        - Ensure BAA compliance with AI vendors
+
+    - path: "src/temporal/**"
+      instructions: |
+        CRITICAL: Workflow processing PHI.
+        - Verify workflow execution logging (audit trail)
+        - Ensure retry logic doesn't expose PHI
+        - Check activity timeout handling
+        - Validate error handling (no PHI in errors)
+
+    - path: "src/components/**"
+      instructions: |
+        Review React components for:
+        - No PHI in browser console.log()
+        - No PHI in client-side localStorage (encrypted only)
+        - Proper access control checks before rendering PHI
+        - Session timeout implementation (15 min)
+
+    # Authentication & Security
+    - path: "src/contexts/AuthContext.tsx"
+      instructions: |
+        CRITICAL: Authentication for PHI access.
+        - Verify MFA enforcement (mandatory)
+        - Check session timeout (15 minutes idle)
+        - Validate token refresh logic
+        - Ensure secure token storage (HttpOnly cookies)
+
+    - path: "src/pages/auth/**"
+      instructions: |
+        Review authentication pages for:
+        - Password complexity requirements
+        - MFA implementation
+        - No credential leakage in error messages
+        - Proper redirect after login
+
+    # API & Backend
+    - path: "src/api/**"
+      instructions: |
+        Review API code for:
+        - Input validation (prevent injection)
+        - Rate limiting (prevent abuse)
+        - Authorization checks (JWT validation)
+        - CORS configuration (restrict origins)
+        - No PHI in API response errors
+
+  # Specific tools configuration
+  tools:
+    eslint:
+      enabled: true
+      command: "npx eslint --format json"
+
+    # TypeScript strict mode
+    tsc:
+      enabled: true
+      command: "npx tsc --noEmit --strict"
+
+  # Custom review instructions
+  instructions: |
+    You are reviewing code for a HIPAA-compliant healthcare application.
+
+    **CRITICAL PRIORITY**:
+    1. PHI Protection:
+       - No PHI in logs, error messages, or console output
+       - All PHI access must be audited
+       - Encryption required for PHI storage and transmission
+
+    2. Security:
+       - Always validate user authorization before PHI access
+       - Use RBAC (role-based access control)
+       - MFA required for all users
+       - Session timeout: 15 minutes idle
+
+    3. Audit Logging:
+       - Log all PHI access (read, write, update, delete)
+       - Include: timestamp, user ID, action, resource, IP, result
+       - Logs must be immutable and retained for 7 years
+
+    4. Data Minimization:
+       - Only access/process the minimum necessary PHI
+       - De-identify data when possible
+       - Require user consent before processing
+
+    5. Error Handling:
+       - Never expose PHI in error messages
+       - Generic errors only (e.g., "Access denied" not "User X cannot access Y's scan")
+       - Log detailed errors server-side only
+
+    6. Third-Party Services:
+       - Verify BAA (Business Associate Agreement) exists
+       - Check data encryption before sending to third-party
+       - Validate third-party HIPAA compliance
+
+    **REVIEW CHECKLIST**:
+    - [ ] No hardcoded secrets or API keys
+    - [ ] All user inputs validated and sanitized
+    - [ ] SQL/NoSQL injection prevented
+    - [ ] XSS prevention (React auto-escapes, but check `dangerouslySetInnerHTML`)
+    - [ ] CSRF protection (tokens for state-changing requests)
+    - [ ] Proper error handling (try/catch blocks)
+    - [ ] TypeScript types are strict (no `any` unless justified)
+    - [ ] Component memoization for performance (React.memo, useMemo, useCallback)
+    - [ ] Accessibility (a11y) considerations
+    - [ ] Test coverage for critical paths
+
+    **SECURITY RED FLAGS** (fail review if found):
+    - PHI in console.log(), alert(), or error messages
+    - Disabled authentication checks (`if (true)` for testing)
+    - Commented-out security code
+    - eval(), dangerouslySetInnerHTML without sanitization
+    - Hardcoded credentials
+    - Missing authorization checks before PHI access
+
+chat:
+  auto_reply: true
+
+# Ignore files
+ignore:
+  - "node_modules/**"
+  - "dist/**"
+  - "build/**"
+  - ".next/**"
+  - "coverage/**"
+  - "*.min.js"
+  - "*.min.css"
+  - "package-lock.json"
+  - "yarn.lock"
+  - ".env"
+  - ".env.local"
+  - ".env.production"
+  - "public/**"
+  - "**/*.test.ts"
+  - "**/*.test.tsx"
+  - "**/*.spec.ts"
+  - "**/*.spec.tsx"
+
+# Additional quality checks
+quality_gates:
+  minimum_test_coverage: 80  # Require 80% test coverage for healthcare app
+  max_complexity: 15         # Cyclomatic complexity threshold
+  max_file_lines: 500        # Max lines per file
+
+# Notifications
+notifications:
+  on_review_complete: true
+  on_issues_found: true
+  severity_threshold: "warning"  # Notify on warnings and errors
+
+# Integration settings
+integrations:
+  github:
+    enabled: true
+    auto_comment: true
+    require_approval: true  # Block merge if critical issues found
