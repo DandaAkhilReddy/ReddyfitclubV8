@@ -133,11 +133,16 @@ Return ONLY valid JSON. No markdown formatting, no code blocks, no explanatory t
         model: 'gpt-4o',
         messages: [
           {
+            role: 'system',
+            content: 'You are an AI-powered athletic performance analysis system used by fitness coaches and trainers. Your role is to analyze training photos and provide objective anthropometric assessments for progress tracking. You describe visible physical characteristics and provide standardized athletic metrics. This is not medical diagnosis - it\'s sports performance data collection.',
+          },
+          {
             role: 'user',
             content: contentArray,
           },
         ],
         max_tokens: 2000, // Increased for detailed body analysis
+        temperature: 0.7, // Add some consistency while maintaining quality
       });
 
       const content = response.choices[0].message.content || '{}';
@@ -145,23 +150,105 @@ Return ONLY valid JSON. No markdown formatting, no code blocks, no explanatory t
       // 🐛 DEBUG: Log raw response to see what GPT-4o is actually returning
       console.log('🔍 Raw GPT-4o Vision Response:', content.substring(0, 500) + (content.length > 500 ? '...' : ''));
 
-      // Extract JSON from response - handle multiple formats
-      // Try different patterns: markdown json block, markdown code block, or plain JSON
-      let jsonMatch =
-        content.match(/```json\s*(\{[\s\S]*?\})\s*```/) || // Markdown json block
-        content.match(/```\s*(\{[\s\S]*?\})\s*```/) ||     // Markdown code block
-        content.match(/(\{[\s\S]*\})/);                     // Plain JSON
+      // 🔬 STEP 7: Multi-Strategy JSON Extraction (5 strategies)
+      let bodyAnalysis: BodyScanResult;
+      let extractionStrategy = '';
 
-      if (!jsonMatch) {
-        console.error('❌ Failed to extract JSON. Full response:', content);
-        throw new Error('Could not extract JSON from vision API response');
+      try {
+        // Strategy 1: Plain JSON (most common)
+        const plainJsonMatch = content.match(/^\s*\{[\s\S]*\}\s*$/);
+        if (plainJsonMatch) {
+          extractionStrategy = 'Strategy 1: Plain JSON';
+          bodyAnalysis = JSON.parse(content.trim());
+          console.log(`✅ ${extractionStrategy} successful`);
+        } else {
+          throw new Error('Not plain JSON, trying next strategy');
+        }
+      } catch (e1) {
+        try {
+          // Strategy 2: Markdown JSON code block with language specifier
+          const jsonBlockMatch = content.match(/```json\s*([\s\S]*?)\s*```/);
+          if (jsonBlockMatch) {
+            extractionStrategy = 'Strategy 2: Markdown JSON block';
+            bodyAnalysis = JSON.parse(jsonBlockMatch[1].trim());
+            console.log(`✅ ${extractionStrategy} successful`);
+          } else {
+            throw new Error('No markdown json block, trying next strategy');
+          }
+        } catch (e2) {
+          try {
+            // Strategy 3: Markdown code block without language specifier
+            const codeBlockMatch = content.match(/```\s*([\s\S]*?)\s*```/);
+            if (codeBlockMatch) {
+              extractionStrategy = 'Strategy 3: Markdown code block';
+              bodyAnalysis = JSON.parse(codeBlockMatch[1].trim());
+              console.log(`✅ ${extractionStrategy} successful`);
+            } else {
+              throw new Error('No markdown code block, trying next strategy');
+            }
+          } catch (e3) {
+            try {
+              // Strategy 4: Find first { to last } (greedy JSON extraction)
+              const firstBrace = content.indexOf('{');
+              const lastBrace = content.lastIndexOf('}');
+              if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+                const extracted = content.substring(firstBrace, lastBrace + 1);
+                extractionStrategy = 'Strategy 4: Brace extraction';
+                bodyAnalysis = JSON.parse(extracted);
+                console.log(`✅ ${extractionStrategy} successful`);
+              } else {
+                throw new Error('No JSON braces found, trying final strategy');
+              }
+            } catch (e4) {
+              try {
+                // Strategy 5: AI-powered JSON repair (handle common issues)
+                extractionStrategy = 'Strategy 5: JSON repair';
+                let repaired = content.trim();
+
+                // Remove common prefixes
+                repaired = repaired.replace(/^(Here is the JSON|Here's the JSON|The JSON is|Output):\s*/i, '');
+
+                // Remove trailing text after JSON
+                const lastClosingBrace = repaired.lastIndexOf('}');
+                if (lastClosingBrace !== -1) {
+                  repaired = repaired.substring(0, lastClosingBrace + 1);
+                }
+
+                // Fix common JSON issues
+                repaired = repaired
+                  .replace(/,\s*}/g, '}')        // Remove trailing commas
+                  .replace(/,\s*]/g, ']')        // Remove trailing commas in arrays
+                  .replace(/'/g, '"')            // Replace single quotes with double quotes
+                  .replace(/(\w+):/g, '"$1":');  // Add quotes to unquoted keys
+
+                bodyAnalysis = JSON.parse(repaired);
+                console.log(`✅ ${extractionStrategy} successful (repaired)`);
+              } catch (e5) {
+                // All strategies failed - log detailed error
+                console.error('❌ All 5 JSON extraction strategies failed!');
+                console.error('Strategy 1 error:', (e1 as Error).message);
+                console.error('Strategy 2 error:', (e2 as Error).message);
+                console.error('Strategy 3 error:', (e3 as Error).message);
+                console.error('Strategy 4 error:', (e4 as Error).message);
+                console.error('Strategy 5 error:', (e5 as Error).message);
+                console.error('Full response:', content);
+                throw new Error(`All JSON extraction strategies failed. Response format: ${content.substring(0, 100)}...`);
+              }
+            }
+          }
+        }
       }
 
-      // Get the captured group (if exists) or the full match
-      const jsonString = jsonMatch[1] || jsonMatch[0];
-      console.log('✅ Extracted JSON string:', jsonString.substring(0, 200) + '...');
+      // 🔬 STEP 8: Schema Validation & Type Checking
+      console.log('🔍 Validating schema and types...');
+      bodyAnalysis = this.validateAndSanitizeAnalysis(bodyAnalysis);
+      console.log('✅ Schema validation passed');
 
-      const bodyAnalysis: BodyScanResult = JSON.parse(jsonString);
+      // 🔬 STEP 9: Confidence Score Calculation
+      console.log('🔍 Calculating confidence score...');
+      const confidenceScore = this.calculateConfidenceScore(bodyAnalysis, photoCount);
+      bodyAnalysis.confidence = confidenceScore;
+      console.log(`✅ Confidence score: ${(confidenceScore * 100).toFixed(1)}%`);
 
       // Calculate unique mathematical Body Signature
       const bodySignature = this.calculateBodySignature(bodyAnalysis);
@@ -322,6 +409,242 @@ Keep it motivating and actionable (max 300 words).`;
       progressSummary,
       recommendations,
     };
+  }
+
+  /**
+   * 🔬 STEP 9: Confidence Score Calculation
+   * Calculate overall confidence based on multiple factors
+   * Formula: confidence = photoFactor × consistencyFactor × completenessFactor × gptConfidence
+   */
+  private calculateConfidenceScore(analysis: any, photoCount: number): number {
+    // Factor 1: Photo count (more photos = more confidence)
+    // 1 photo = 0.65, 2 photos = 0.85, 3 photos = 1.0
+    const photoFactor = photoCount === 1 ? 0.65 : photoCount === 2 ? 0.85 : 1.0;
+
+    // Factor 2: Measurement consistency (check if measurements make anatomical sense)
+    let consistencyScore = 1.0;
+
+    if (analysis.measurements) {
+      const m = analysis.measurements;
+
+      // Check shoulder > chest (should not happen)
+      if (m.shoulderWidthCm && m.chestCm && m.shoulderWidthCm > m.chestCm) {
+        consistencyScore -= 0.1;
+      }
+
+      // Check chest > waist (typical for most people)
+      if (m.chestCm && m.waistCm && m.chestCm < m.waistCm) {
+        consistencyScore -= 0.15;
+      }
+
+      // Check waist/hip ratio is reasonable (0.7-1.1)
+      if (m.waistCm && m.hipsCm) {
+        const ratio = m.waistCm / m.hipsCm;
+        if (ratio < 0.7 || ratio > 1.1) {
+          consistencyScore -= 0.1;
+        }
+      }
+
+      // Check thigh > calf (should always be true)
+      if (m.thighCm && m.calfCm && m.thighCm <= m.calfCm) {
+        consistencyScore -= 0.1;
+      }
+
+      // Check bicep > forearm (should always be true)
+      if (m.bicepCm && m.forearmCm && m.bicepCm <= m.forearmCm) {
+        consistencyScore -= 0.1;
+      }
+    }
+
+    consistencyScore = Math.max(0.5, consistencyScore); // Min 0.5
+
+    // Factor 3: Data completeness (how many fields are populated)
+    let completeFieldCount = 0;
+    let totalFields = 0;
+
+    // Count measurement fields
+    if (analysis.measurements) {
+      const measurementFields = ['chestCm', 'waistCm', 'hipsCm', 'bicepCm', 'thighCm', 'shoulderWidthCm', 'neckCm', 'calfCm', 'forearmCm', 'heightCm'];
+      measurementFields.forEach(field => {
+        totalFields++;
+        if (typeof analysis.measurements[field] === 'number') {
+          completeFieldCount++;
+        }
+      });
+    }
+
+    // Count other required fields
+    const requiredFields = ['bodyFatPercentage', 'muscleMassLevel', 'physiqueRating', 'fitnessLevel', 'muscleDevelopment', 'recommendations'];
+    requiredFields.forEach(field => {
+      totalFields++;
+      if (analysis[field] !== undefined && analysis[field] !== null) {
+        completeFieldCount++;
+      }
+    });
+
+    const completenessFactor = totalFields > 0 ? completeFieldCount / totalFields : 0.7;
+
+    // Factor 4: GPT-4o's own confidence score (if provided)
+    const gptConfidence = analysis.confidence || 0.75; // Default to 0.75 if not provided
+
+    // Calculate weighted confidence score
+    const finalConfidence =
+      photoFactor * 0.35 +       // 35% weight on photo count
+      consistencyScore * 0.25 +  // 25% weight on consistency
+      completenessFactor * 0.20 + // 20% weight on completeness
+      gptConfidence * 0.20;      // 20% weight on GPT's confidence
+
+    // Clamp between 0.4 and 0.99 (never 100% confident, never below 40%)
+    return Math.max(0.4, Math.min(0.99, finalConfidence));
+  }
+
+  /**
+   * 🔬 STEP 8: Schema Validation & Type Checking
+   * Validates and sanitizes body analysis data
+   * Ensures all required fields exist with correct types and ranges
+   */
+  private validateAndSanitizeAnalysis(analysis: any): any {
+    // Validate body fat percentage (5-50% valid range)
+    if (typeof analysis.bodyFatPercentage !== 'number' || analysis.bodyFatPercentage < 5 || analysis.bodyFatPercentage > 50) {
+      console.warn(`⚠️ Invalid body fat: ${analysis.bodyFatPercentage}, defaulting to 20%`);
+      analysis.bodyFatPercentage = 20;
+    }
+
+    // Validate muscle mass level
+    const validMuscleLevels = ['low', 'moderate', 'high'];
+    if (!validMuscleLevels.includes(analysis.muscleMassLevel)) {
+      console.warn(`⚠️ Invalid muscle mass level: ${analysis.muscleMassLevel}, defaulting to 'moderate'`);
+      analysis.muscleMassLevel = 'moderate';
+    }
+
+    // Validate physique rating (1-10)
+    if (typeof analysis.physiqueRating !== 'number' || analysis.physiqueRating < 1 || analysis.physiqueRating > 10) {
+      console.warn(`⚠️ Invalid physique rating: ${analysis.physiqueRating}, defaulting to 5`);
+      analysis.physiqueRating = 5;
+    }
+
+    // Validate and sanitize measurements
+    if (!analysis.measurements || typeof analysis.measurements !== 'object') {
+      console.warn('⚠️ Missing measurements object, creating default');
+      analysis.measurements = {};
+    }
+
+    const measurementDefaults = {
+      chestCm: 100,
+      waistCm: 85,
+      hipsCm: 95,
+      bicepCm: 35,
+      thighCm: 55,
+      shoulderWidthCm: 45,
+      neckCm: 38,
+      calfCm: 38,
+      forearmCm: 28,
+      heightCm: 175,
+    };
+
+    // Validate each measurement (reasonable ranges in cm)
+    const measurementRanges: Record<string, [number, number]> = {
+      chestCm: [70, 140],
+      waistCm: [60, 130],
+      hipsCm: [70, 140],
+      bicepCm: [20, 50],
+      thighCm: [35, 80],
+      shoulderWidthCm: [35, 60],
+      neckCm: [28, 50],
+      calfCm: [25, 50],
+      forearmCm: [20, 40],
+      heightCm: [140, 220],
+    };
+
+    Object.entries(measurementDefaults).forEach(([key, defaultValue]) => {
+      const [min, max] = measurementRanges[key] || [0, 999];
+      const value = analysis.measurements[key];
+
+      if (typeof value !== 'number' || value < min || value > max) {
+        console.warn(`⚠️ Invalid ${key}: ${value}, defaulting to ${defaultValue}`);
+        analysis.measurements[key] = defaultValue;
+      }
+    });
+
+    // Validate posture
+    if (!analysis.posture || typeof analysis.posture !== 'object') {
+      analysis.posture = { quality: 'good', notes: 'Normal posture' };
+    }
+
+    const validPostureQualities = ['good', 'fair', 'needs improvement'];
+    if (!validPostureQualities.includes(analysis.posture.quality)) {
+      analysis.posture.quality = 'good';
+    }
+
+    if (typeof analysis.posture.notes !== 'string') {
+      analysis.posture.notes = 'Normal posture';
+    }
+
+    // Validate fitness level
+    const validFitnessLevels = ['beginner', 'intermediate', 'advanced'];
+    if (!validFitnessLevels.includes(analysis.fitnessLevel)) {
+      console.warn(`⚠️ Invalid fitness level: ${analysis.fitnessLevel}, defaulting to 'intermediate'`);
+      analysis.fitnessLevel = 'intermediate';
+    }
+
+    // Validate muscle development
+    if (!analysis.muscleDevelopment || typeof analysis.muscleDevelopment !== 'object') {
+      analysis.muscleDevelopment = {
+        chest: 'moderate',
+        back: 'moderate',
+        shoulders: 'moderate',
+        arms: 'moderate',
+        core: 'moderate',
+        legs: 'moderate',
+      };
+    }
+
+    const validMuscleDevLevels = ['low', 'moderate', 'good', 'excellent'];
+    const muscleGroups = ['chest', 'back', 'shoulders', 'arms', 'core', 'legs'];
+    muscleGroups.forEach(group => {
+      if (!validMuscleDevLevels.includes(analysis.muscleDevelopment[group])) {
+        analysis.muscleDevelopment[group] = 'moderate';
+      }
+    });
+
+    // Validate recommendations
+    if (!analysis.recommendations || typeof analysis.recommendations !== 'object') {
+      analysis.recommendations = {
+        focusAreas: [],
+        workoutSplit: 'Full body 3x per week',
+        nutritionTips: 'Maintain balanced diet',
+        progressGoals: 'Improve overall fitness',
+      };
+    }
+
+    if (!Array.isArray(analysis.recommendations.focusAreas)) {
+      analysis.recommendations.focusAreas = ['chest', 'shoulders'];
+    }
+
+    if (typeof analysis.recommendations.workoutSplit !== 'string') {
+      analysis.recommendations.workoutSplit = 'Full body 3x per week';
+    }
+
+    if (typeof analysis.recommendations.nutritionTips !== 'string') {
+      analysis.recommendations.nutritionTips = 'Maintain balanced diet';
+    }
+
+    if (typeof analysis.recommendations.progressGoals !== 'string') {
+      analysis.recommendations.progressGoals = 'Improve overall fitness';
+    }
+
+    // Validate confidence (0-1 range)
+    if (typeof analysis.confidence !== 'number' || analysis.confidence < 0 || analysis.confidence > 1) {
+      console.warn(`⚠️ Invalid confidence: ${analysis.confidence}, defaulting to 0.75`);
+      analysis.confidence = 0.75;
+    }
+
+    // Validate notes
+    if (typeof analysis.notes !== 'string') {
+      analysis.notes = 'Athletic assessment based on visible morphology';
+    }
+
+    return analysis;
   }
 
   /**

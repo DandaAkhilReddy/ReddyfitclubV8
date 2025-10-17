@@ -94,13 +94,50 @@ Return your analysis as JSON in this exact format:
       });
 
       const content = response.choices[0].message.content || '{}';
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
 
-      if (!jsonMatch) {
-        throw new Error('Could not extract JSON from vision API response');
+      // Multi-Strategy JSON Extraction (same as body.service.ts)
+      let nutritionData: NutritionData;
+
+      try {
+        // Strategy 1: Plain JSON
+        nutritionData = JSON.parse(content.trim());
+      } catch (e1) {
+        try {
+          // Strategy 2: Markdown JSON block
+          const jsonBlockMatch = content.match(/```json\s*([\s\S]*?)\s*```/);
+          if (jsonBlockMatch) {
+            nutritionData = JSON.parse(jsonBlockMatch[1].trim());
+          } else {
+            throw new Error('No markdown json block');
+          }
+        } catch (e2) {
+          try {
+            // Strategy 3: Markdown code block
+            const codeBlockMatch = content.match(/```\s*([\s\S]*?)\s*```/);
+            if (codeBlockMatch) {
+              nutritionData = JSON.parse(codeBlockMatch[1].trim());
+            } else {
+              throw new Error('No markdown code block');
+            }
+          } catch (e3) {
+            try {
+              // Strategy 4: Brace extraction
+              const firstBrace = content.indexOf('{');
+              const lastBrace = content.lastIndexOf('}');
+              if (firstBrace !== -1 && lastBrace !== -1) {
+                nutritionData = JSON.parse(content.substring(firstBrace, lastBrace + 1));
+              } else {
+                throw new Error('No JSON braces found');
+              }
+            } catch (e4) {
+              console.error('❌ All JSON extraction strategies failed for nutrition analysis');
+              console.error('Response:', content);
+              throw new Error('Could not extract JSON from vision API response');
+            }
+          }
+        }
       }
 
-      const nutritionData: NutritionData = JSON.parse(jsonMatch[0]);
       console.log(`✅ GPT-4 Vision analysis complete: ${nutritionData.totalCalories} cal, ${nutritionData.foodItems.length} items identified`);
 
       return nutritionData;
