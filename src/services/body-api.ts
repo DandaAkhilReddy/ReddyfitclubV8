@@ -69,32 +69,8 @@ export interface BodyAnalysisResponse {
 }
 
 /**
- * Convert Firebase Storage URL to base64
- */
-export async function convertImageUrlToBase64(imageUrl: string): Promise<string> {
-  try {
-    const response = await fetch(imageUrl);
-    const blob = await response.blob();
-
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = reader.result as string;
-        // Remove data URL prefix (e.g., "data:image/jpeg;base64,")
-        const base64 = base64String.split(',')[1];
-        resolve(base64);
-      };
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
-  } catch (error) {
-    console.error('Error converting image URL to base64:', error);
-    throw new Error(`Failed to convert image: ${error}`);
-  }
-}
-
-/**
  * Analyze body composition from 1-3 photos
+ * Images are sent as Firebase URLs - backend will download and convert them
  */
 export async function analyzeBody(
   imageUrls: string[],
@@ -106,20 +82,13 @@ export async function analyzeBody(
   } = {}
 ): Promise<BodyAnalysisResponse> {
   try {
-    console.log(`🏋️ Converting ${imageUrls.length} image(s) to base64...`);
+    console.log(`🏋️ Sending ${imageUrls.length} image URL(s) to backend...`);
 
-    // Convert all image URLs to base64 in parallel
-    const imageBase64Array = await Promise.all(
-      imageUrls.map(url => convertImageUrlToBase64(url))
-    );
-
-    console.log(`✅ Images converted. Calling body analysis API...`);
-
-    // Call the body analysis API
+    // Call the body analysis API - backend will download and convert images
     const response = await axios.post<BodyAnalysisResponse>(
       `${API_BASE_URL}/body/analyze`,
       {
-        imageBase64Array,
+        imageUrls, // Send URLs directly instead of base64
         userId,
         includeWorkoutPlan: options.includeWorkoutPlan ?? false,
         includeNutritionPlan: options.includeNutritionPlan ?? false,
@@ -230,5 +199,4 @@ export default {
   analyzeBody,
   compareScans,
   getBodySignatureInfo,
-  convertImageUrlToBase64,
 };

@@ -11,21 +11,31 @@ class BodyController {
    */
   async analyzeBody(req: Request, res: Response) {
     try {
-      const { imageBase64Array, userId, includeWorkoutPlan, includeNutritionPlan, goal } = req.body;
+      const { imageUrls, imageBase64Array, userId, includeWorkoutPlan, includeNutritionPlan, goal } = req.body;
 
-      if (!imageBase64Array || !Array.isArray(imageBase64Array) || imageBase64Array.length === 0) {
-        return res.status(400).json({ error: 'At least one body photo is required (front, side, or back)' });
+      // Support both imageUrls (new) and imageBase64Array (legacy)
+      let imagesToAnalyze: string[] = [];
+
+      if (imageUrls && Array.isArray(imageUrls) && imageUrls.length > 0) {
+        // New format: Download images from URLs
+        console.log(`📥 Downloading ${imageUrls.length} image(s) from Firebase Storage...`);
+        imagesToAnalyze = await bodyService.downloadAndConvertImages(imageUrls);
+      } else if (imageBase64Array && Array.isArray(imageBase64Array) && imageBase64Array.length > 0) {
+        // Legacy format: Use base64 directly
+        imagesToAnalyze = imageBase64Array;
+      } else {
+        return res.status(400).json({ error: 'Either imageUrls or imageBase64Array is required' });
       }
 
-      if (imageBase64Array.length > 3) {
+      if (imagesToAnalyze.length > 3) {
         return res.status(400).json({ error: 'Maximum 3 photos allowed (front, side, back)' });
       }
 
-      const photoCount = imageBase64Array.length;
+      const photoCount = imagesToAnalyze.length;
       console.log(`🏋️ Analyzing ${photoCount} body photo${photoCount > 1 ? 's' : ''} for user: ${userId}`);
 
       // Step 1: Analyze body composition from all images
-      const scanResult = await bodyService.analyzeBodyFromImages(imageBase64Array);
+      const scanResult = await bodyService.analyzeBodyFromImages(imagesToAnalyze);
 
       // Step 2: Generate workout plan if requested
       let workoutPlan: string | undefined;

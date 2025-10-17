@@ -22,7 +22,8 @@ export function Scan() {
   const backInputRef = useRef<HTMLInputElement>(null);
 
   // Check if user has scans remaining
-  const hasScansRemaining = userProfile && (userProfile.scansUsed < userProfile.scansLimit);
+  // LIMIT DISABLED FOR TESTING - Remove this line to re-enable scan limits
+  const hasScansRemaining = true; // userProfile && (userProfile.scansUsed < userProfile.scansLimit);
 
   const handleImageSelect = (file: File, type: 'front' | 'side' | 'back') => {
     if (!file.type.startsWith('image/')) {
@@ -58,10 +59,11 @@ export function Scan() {
       return;
     }
 
-    if (!hasScansRemaining) {
-      setError('You have reached your scan limit for this month');
-      return;
-    }
+    // Limit check disabled for testing
+    // if (!hasScansRemaining) {
+    //   setError('You have reached your scan limit for this month');
+    //   return;
+    // }
 
     setUploading(true);
     setError('');
