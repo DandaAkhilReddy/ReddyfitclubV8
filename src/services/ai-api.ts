@@ -60,14 +60,19 @@ export interface AICoachResponse {
 
 class AIApiService {
   /**
-   * Analyze meal from image
+   * Analyze meal from multiple images
    */
-  async analyzeMealFromImage(imageFile: File, userId: string): Promise<AICoachResponse> {
-    // Convert image to base64
-    const imageBase64 = await this.fileToBase64(imageFile);
+  async analyzeMealFromImage(imageFiles: File | File[], userId: string): Promise<AICoachResponse> {
+    // Support both single file (backwards compatible) and multiple files
+    const files = Array.isArray(imageFiles) ? imageFiles : [imageFiles];
+
+    // Convert all images to base64
+    const imageBase64Array = await Promise.all(
+      files.map(file => this.fileToBase64(file))
+    );
 
     const response = await apiClient.post<AICoachResponse>('/api/meal/analyze-image', {
-      imageBase64,
+      imageBase64Array,
       userId,
     });
 

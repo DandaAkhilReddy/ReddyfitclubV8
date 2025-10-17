@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { doc, getDoc } from 'firebase/firestore';
 import { db, Collections } from '../lib/firebase';
-import { ScanResult } from '../types/user';
+import type { ScanResult } from '../types/user';
 import { TrendingUp, TrendingDown, Activity, Droplet, Apple, Dumbbell, ArrowRight } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 

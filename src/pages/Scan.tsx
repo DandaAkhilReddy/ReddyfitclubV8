@@ -10,15 +10,21 @@ export function Scan() {
   const { userProfile, updateUserProfile } = useAuth();
   const [frontImage, setFrontImage] = useState<File | null>(null);
   const [frontPreview, setFrontPreview] = useState<string>('');
+  const [sideImage, setSideImage] = useState<File | null>(null);
+  const [sidePreview, setSidePreview] = useState<string>('');
+  const [backImage, setBackImage] = useState<File | null>(null);
+  const [backPreview, setBackPreview] = useState<string>('');
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
 
   const frontInputRef = useRef<HTMLInputElement>(null);
+  const sideInputRef = useRef<HTMLInputElement>(null);
+  const backInputRef = useRef<HTMLInputElement>(null);
 
   // Check if user has scans remaining
   const hasScansRemaining = userProfile && (userProfile.scansUsed < userProfile.scansLimit);
 
-  const handleImageSelect = (file: File, type: 'front') => {
+  const handleImageSelect = (file: File, type: 'front' | 'side' | 'back') => {
     if (!file.type.startsWith('image/')) {
       setError('Please select a valid image file');
       return;
@@ -34,6 +40,12 @@ export function Scan() {
       if (type === 'front') {
         setFrontImage(file);
         setFrontPreview(reader.result as string);
+      } else if (type === 'side') {
+        setSideImage(file);
+        setSidePreview(reader.result as string);
+      } else if (type === 'back') {
+        setBackImage(file);
+        setBackPreview(reader.result as string);
       }
     };
     reader.readAsDataURL(file);
@@ -62,13 +74,31 @@ export function Scan() {
       await uploadBytes(frontRef, frontImage);
       const frontUrl = await getDownloadURL(frontRef);
 
+      // Upload side image if provided
+      let sideUrl: string | undefined;
+      if (sideImage) {
+        const sideRef = ref(storage, `scans/${userProfile.uid}/${timestamp}_side.jpg`);
+        await uploadBytes(sideRef, sideImage);
+        sideUrl = await getDownloadURL(sideRef);
+      }
+
+      // Upload back image if provided
+      let backUrl: string | undefined;
+      if (backImage) {
+        const backRef = ref(storage, `scans/${userProfile.uid}/${timestamp}_back.jpg`);
+        await uploadBytes(backRef, backImage);
+        backUrl = await getDownloadURL(backRef);
+      }
+
       // Update scans used count
       await updateUserProfile({
         scansUsed: userProfile.scansUsed + 1,
       });
 
-      // Navigate to processing page with image URL
-      navigate('/scan/processing', { state: { frontUrl, timestamp } });
+      // Navigate to processing page with all image URLs
+      navigate('/scan/processing', {
+        state: { frontUrl, sideUrl, backUrl, timestamp },
+      });
     } catch (err: any) {
       console.error('Upload error:', err);
       setError(err.message || 'Failed to upload scan. Please try again.');
@@ -76,11 +106,19 @@ export function Scan() {
     }
   };
 
-  const handleRemoveImage = (type: 'front') => {
+  const handleRemoveImage = (type: 'front' | 'side' | 'back') => {
     if (type === 'front') {
       setFrontImage(null);
       setFrontPreview('');
       if (frontInputRef.current) frontInputRef.current.value = '';
+    } else if (type === 'side') {
+      setSideImage(null);
+      setSidePreview('');
+      if (sideInputRef.current) sideInputRef.current.value = '';
+    } else if (type === 'back') {
+      setBackImage(null);
+      setBackPreview('');
+      if (backInputRef.current) backInputRef.current.value = '';
     }
   };
 
@@ -119,7 +157,7 @@ export function Scan() {
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-2">Start Your Body Scan</h1>
           <p className="text-xl text-gray-600">
-            Upload a clear front-facing photo for AI-powered body composition analysis
+            Upload 1-3 body photos for AI-powered composition analysis with Nobel Prize-level Body Signature
           </p>
         </div>
 
@@ -149,8 +187,8 @@ export function Scan() {
 
         {/* Photo Guidelines */}
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-8">
-          <h3 className="text-lg font-bold text-blue-900 mb-3">📸 Photo Guidelines for Best Results</h3>
-          <div className="grid md:grid-cols-2 gap-4 text-sm text-blue-800">
+          <h3 className="text-lg font-bold text-blue-900 mb-3">📸 Photo Guidelines for Accurate Body Analysis</h3>
+          <div className="grid md:grid-cols-2 gap-4 text-sm text-blue-800 mb-4">
             <div className="flex items-start gap-2">
               <span className="text-blue-600">✓</span>
               <span>Stand 6-8 feet from camera</span>
@@ -161,55 +199,155 @@ export function Scan() {
             </div>
             <div className="flex items-start gap-2">
               <span className="text-blue-600">✓</span>
-              <span>Wear fitted clothing or workout attire</span>
+              <span>Plain background (wall or door)</span>
             </div>
             <div className="flex items-start gap-2">
               <span className="text-blue-600">✓</span>
-              <span>Plain background (wall or door)</span>
+              <span>Arms slightly away from body</span>
             </div>
+            <div className="flex items-start gap-2">
+              <span className="text-blue-600">✓</span>
+              <span>Neutral stance (don't flex)</span>
+            </div>
+            <div className="flex items-start gap-2">
+              <span className="text-blue-600">✓</span>
+              <span>Multiple angles = more accurate</span>
+            </div>
+          </div>
+          <div className="bg-white border border-blue-300 rounded-lg p-4">
+            <p className="font-semibold text-blue-900 mb-2">👕 What to Wear:</p>
+            <p className="text-sm text-blue-800">
+              <strong>Men:</strong> Shirtless, shorts or fitted pants<br/>
+              <strong>Women:</strong> Sports bra + fitted leggings or similar
+            </p>
           </div>
         </div>
 
-        {/* Upload Area */}
+        {/* Upload Areas */}
         <div className="bg-white rounded-xl shadow-lg p-8 mb-8">
-          <h3 className="text-xl font-bold text-gray-900 mb-6">Front-Facing Photo (Required)</h3>
+          <h3 className="text-xl font-bold text-gray-900 mb-2">Upload Body Photos</h3>
+          <p className="text-sm text-gray-600 mb-6">
+            Front photo required. Side and back photos are optional but improve accuracy.
+          </p>
 
-          {!frontPreview ? (
-            <div
-              onClick={() => frontInputRef.current?.click()}
-              className="border-2 border-dashed border-gray-300 rounded-xl p-12 text-center cursor-pointer hover:border-primary-500 hover:bg-primary-50 transition-colors"
-            >
-              <Camera className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <h4 className="text-lg font-semibold text-gray-700 mb-2">Upload Front Photo</h4>
-              <p className="text-gray-500 mb-4">Click to select or drag and drop</p>
-              <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
-                <Upload className="w-4 h-4" />
-                <span>JPG, PNG up to 10MB</span>
-              </div>
-              <input
-                ref={frontInputRef}
-                type="file"
-                accept="image/*"
-                capture="environment"
-                onChange={(e) => e.target.files?.[0] && handleImageSelect(e.target.files[0], 'front')}
-                className="hidden"
-              />
+          <div className="grid md:grid-cols-3 gap-6">
+            {/* Front Photo */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Front View <span className="text-red-500">*</span>
+              </label>
+              {!frontPreview ? (
+                <div
+                  onClick={() => frontInputRef.current?.click()}
+                  className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-primary-500 hover:bg-primary-50 transition-colors min-h-[200px] flex flex-col items-center justify-center"
+                >
+                  <Camera className="w-12 h-12 text-gray-400 mb-2" />
+                  <p className="text-sm font-medium text-gray-600 mb-1">Upload Front</p>
+                  <p className="text-xs text-gray-500">JPG, PNG (10MB max)</p>
+                  <input
+                    ref={frontInputRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={(e) => e.target.files?.[0] && handleImageSelect(e.target.files[0], 'front')}
+                    className="hidden"
+                  />
+                </div>
+              ) : (
+                <div className="relative">
+                  <img
+                    src={frontPreview}
+                    alt="Front preview"
+                    className="w-full h-[200px] object-cover rounded-lg border-2 border-gray-200"
+                  />
+                  <button
+                    onClick={() => handleRemoveImage('front')}
+                    className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
             </div>
-          ) : (
-            <div className="relative">
-              <img
-                src={frontPreview}
-                alt="Front preview"
-                className="w-full max-h-96 object-contain rounded-lg border-2 border-gray-200"
-              />
-              <button
-                onClick={() => handleRemoveImage('front')}
-                className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600"
-              >
-                <X className="w-5 h-5" />
-              </button>
+
+            {/* Side Photo */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Side View <span className="text-gray-400">(Optional)</span>
+              </label>
+              {!sidePreview ? (
+                <div
+                  onClick={() => sideInputRef.current?.click()}
+                  className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-primary-500 hover:bg-primary-50 transition-colors min-h-[200px] flex flex-col items-center justify-center"
+                >
+                  <Camera className="w-12 h-12 text-gray-400 mb-2" />
+                  <p className="text-sm font-medium text-gray-600 mb-1">Upload Side</p>
+                  <p className="text-xs text-gray-500">Better posture analysis</p>
+                  <input
+                    ref={sideInputRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={(e) => e.target.files?.[0] && handleImageSelect(e.target.files[0], 'side')}
+                    className="hidden"
+                  />
+                </div>
+              ) : (
+                <div className="relative">
+                  <img
+                    src={sidePreview}
+                    alt="Side preview"
+                    className="w-full h-[200px] object-cover rounded-lg border-2 border-gray-200"
+                  />
+                  <button
+                    onClick={() => handleRemoveImage('side')}
+                    className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
             </div>
-          )}
+
+            {/* Back Photo */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Back View <span className="text-gray-400">(Optional)</span>
+              </label>
+              {!backPreview ? (
+                <div
+                  onClick={() => backInputRef.current?.click()}
+                  className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-primary-500 hover:bg-primary-50 transition-colors min-h-[200px] flex flex-col items-center justify-center"
+                >
+                  <Camera className="w-12 h-12 text-gray-400 mb-2" />
+                  <p className="text-sm font-medium text-gray-600 mb-1">Upload Back</p>
+                  <p className="text-xs text-gray-500">Back muscle analysis</p>
+                  <input
+                    ref={backInputRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={(e) => e.target.files?.[0] && handleImageSelect(e.target.files[0], 'back')}
+                    className="hidden"
+                  />
+                </div>
+              ) : (
+                <div className="relative">
+                  <img
+                    src={backPreview}
+                    alt="Back preview"
+                    className="w-full h-[200px] object-cover rounded-lg border-2 border-gray-200"
+                  />
+                  <button
+                    onClick={() => handleRemoveImage('back')}
+                    className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Action Buttons */}

@@ -7,20 +7,24 @@ import { AICoachResponse } from '../types';
 class MealController {
   /**
    * POST /api/meal/analyze-image
-   * Analyze meal from photo and suggest workout
+   * Analyze meal from multiple photos and suggest workout
    */
   async analyzeMealFromImage(req: Request, res: Response) {
     try {
-      const { imageBase64, userId } = req.body;
+      const { imageBase64Array, userId } = req.body;
 
-      if (!imageBase64) {
-        return res.status(400).json({ error: 'Image is required' });
+      // Support both single image (backwards compatible) and multiple images
+      const images = Array.isArray(imageBase64Array) ? imageBase64Array : [imageBase64Array];
+
+      if (!images || images.length === 0) {
+        return res.status(400).json({ error: 'At least one image is required' });
       }
 
-      console.log(`📸 Analyzing meal image for user: ${userId}`);
+      const photoCount = images.length;
+      console.log(`📸 Analyzing ${photoCount} meal photo${photoCount > 1 ? 's' : ''} for user: ${userId}`);
 
-      // Step 1: Analyze nutrition from image
-      const nutrition = await nutritionService.analyzeMealFromImage(imageBase64);
+      // Step 1: Analyze nutrition from all images
+      const nutrition = await nutritionService.analyzeMealFromImage(images);
 
       // Step 2: Generate matching workout
       const workout = await workoutService.generateWorkoutFromMeal(nutrition);
@@ -35,7 +39,7 @@ class MealController {
         timestamp: new Date(),
       };
 
-      console.log(`✅ Analysis complete: ${nutrition.totalCalories} cal → ${workout.title}`);
+      console.log(`✅ Analysis complete (${photoCount} photo${photoCount > 1 ? 's' : ''}): ${nutrition.totalCalories} cal → ${workout.title}`);
 
       res.json(response);
     } catch (error: any) {

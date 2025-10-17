@@ -5,6 +5,7 @@ import cors from 'cors';
 import multer from 'multer';
 import mealController from './controllers/meal.controller';
 import workoutController from './controllers/workout.controller';
+import bodyController from './controllers/body.controller';
 
 const app: Express = express();
 const PORT = process.env.PORT || 3001;
@@ -81,6 +82,30 @@ app.post('/api/workout/recommendations', workoutController.getRecommendations.bi
 app.post('/api/workout/calculate-calories', workoutController.calculateCalories.bind(workoutController));
 
 // ============================================
+// BODY SCAN ANALYSIS ENDPOINTS
+// ============================================
+
+/**
+ * POST /api/body/analyze
+ * Body: { imageBase64Array: string[], userId: string, includeWorkoutPlan?: boolean, includeNutritionPlan?: boolean, goal?: string }
+ * Returns: { scanResult, workoutPlan?, nutritionPlan?, timestamp }
+ */
+app.post('/api/body/analyze', bodyController.analyzeBody.bind(bodyController));
+
+/**
+ * POST /api/body/compare
+ * Body: { previousScan: BodyScanResult, currentScan: BodyScanResult }
+ * Returns: { bodyFatChange, muscleMassChange, measurementChanges, progressSummary, recommendations }
+ */
+app.post('/api/body/compare', bodyController.compareScans.bind(bodyController));
+
+/**
+ * GET /api/body/signature/:uniqueId
+ * Returns: Body signature interpretation
+ */
+app.get('/api/body/signature/:uniqueId', bodyController.getBodySignatureInfo.bind(bodyController));
+
+// ============================================
 // FILE UPLOAD ENDPOINT (Alternative to base64)
 // ============================================
 
@@ -132,13 +157,19 @@ app.listen(PORT, () => {
   console.log(`🔥 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log('=' .repeat(50));
   console.log('\n📚 Available Endpoints:');
-  console.log('  POST /api/meal/analyze-image');
-  console.log('  POST /api/meal/analyze-description');
-  console.log('  POST /api/meal/calculate-goals');
-  console.log('  POST /api/meal/upload-image');
-  console.log('  POST /api/workout/generate');
-  console.log('  POST /api/workout/recommendations');
-  console.log('  POST /api/workout/calculate-calories\n');
+  console.log('\n  🍽️  Meal Analysis:');
+  console.log('    POST /api/meal/analyze-image');
+  console.log('    POST /api/meal/analyze-description');
+  console.log('    POST /api/meal/calculate-goals');
+  console.log('    POST /api/meal/upload-image');
+  console.log('\n  💪 Workout Generation:');
+  console.log('    POST /api/workout/generate');
+  console.log('    POST /api/workout/recommendations');
+  console.log('    POST /api/workout/calculate-calories');
+  console.log('\n  🏋️  Body Scan Analysis (NEW!):');
+  console.log('    POST /api/body/analyze');
+  console.log('    POST /api/body/compare');
+  console.log('    GET  /api/body/signature/:uniqueId\n');
 });
 
 export default app;
