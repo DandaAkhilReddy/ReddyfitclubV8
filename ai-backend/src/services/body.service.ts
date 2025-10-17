@@ -12,6 +12,43 @@ class BodyService {
   }
 
   /**
+   * Download images from Firebase URLs and convert to base64
+   * This solves CORS issues by downloading server-side
+   */
+  async downloadAndConvertImages(imageUrls: string[]): Promise<string[]> {
+    const imageBase64Array: string[] = [];
+
+    for (const imageUrl of imageUrls) {
+      try {
+        console.log(`📥 Downloading image from: ${imageUrl.substring(0, 80)}...`);
+
+        // Use fetch (Node.js 18+) or axios to download
+        const response = await fetch(imageUrl);
+
+        if (!response.ok) {
+          throw new Error(`Failed to download image: ${response.statusText}`);
+        }
+
+        // Get image as buffer
+        const arrayBuffer = await response.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+
+        // Convert to base64
+        const base64 = buffer.toString('base64');
+        imageBase64Array.push(base64);
+
+        console.log(`✅ Downloaded and converted image (${(buffer.length / 1024).toFixed(2)} KB)`);
+      } catch (error: any) {
+        console.error(`❌ Error downloading image from ${imageUrl}:`, error.message);
+        throw new Error(`Failed to download image: ${error.message}`);
+      }
+    }
+
+    console.log(`✅ All ${imageBase64Array.length} images downloaded and converted`);
+    return imageBase64Array;
+  }
+
+  /**
    * Analyze body composition from multiple photos using GPT-4o Vision
    * Supports 1-3 photos (front, side, back)
    */
@@ -23,44 +60,18 @@ class BodyService {
       const contentArray: any[] = [
         {
           type: 'text',
-          text: `You are an expert fitness coach and body composition analyst. ${photoCount > 1 ?
-            `Analyze ALL ${photoCount} body photos. These may show different angles (front, side, back) of the same person.` :
-            'Analyze this body photo and provide detailed body composition estimates.'}
+          text: `You are an athletic performance assessment system analyzing training progress photos. ${photoCount > 1 ? `Analyzing ${photoCount} photos from multiple angles.` : 'Analyzing training photo.'}
 
-IMPORTANT INSTRUCTIONS:
-${photoCount > 1 ?
-  '- Look across ALL photos to get a comprehensive view\n- Use different angles to improve accuracy\n- Front view: overall physique, symmetry\n- Side view: posture, core development\n- Back view: back muscles, posterior chain' :
-  '- Analyze visible muscle definition and body composition\n- Estimate based on visible physique markers'}
+Perform anthropometric body composition assessment based on visible physical characteristics:
 
-Based on the photo${photoCount > 1 ? 's' : ''}, provide detailed estimates for:
+${photoCount > 1 ? `From all ${photoCount} angles, evaluate:` : 'From the photo, evaluate:'}
+1. Muscle definition visibility (abs, shoulders, arms, legs)
+2. Body composition estimation
+3. Structural proportions and posture
+4. Muscle group development levels
 
-1. **Body Composition**:
-   - Body fat percentage (estimate based on visible definition)
-   - Muscle mass level (low/moderate/high)
-   - Overall physique rating (1-10)
+Provide athletic performance metrics in JSON format with anthropometric measurements:
 
-2. **Measurements** (estimate in cm):
-   - Chest circumference
-   - Waist circumference
-   - Hip circumference
-   - Bicep circumference (relaxed)
-   - Thigh circumference
-
-3. **Posture & Form Analysis**:
-   - Posture quality (good/fair/needs improvement)
-   - Notable imbalances or asymmetries
-   - Areas that need attention
-
-4. **Fitness Assessment**:
-   - Estimated fitness level (beginner/intermediate/advanced)
-   - Visible muscle groups (well-developed vs underdeveloped)
-   - Training recommendations
-
-5. **Progress Potential**:
-   - Areas with most growth potential
-   - Suggested focus areas for next 3 months
-
-CRITICAL: Return your analysis as valid JSON in this EXACT format (no markdown, no code blocks):
 {
   "bodyFatPercentage": 15.5,
   "muscleMassLevel": "moderate",
@@ -79,7 +90,7 @@ CRITICAL: Return your analysis as valid JSON in this EXACT format (no markdown, 
   },
   "posture": {
     "quality": "good",
-    "notes": "Slight forward shoulder rotation, good spinal alignment"
+    "notes": "Neutral spine alignment, balanced shoulders"
   },
   "fitnessLevel": "intermediate",
   "muscleDevelopment": {
@@ -93,12 +104,14 @@ CRITICAL: Return your analysis as valid JSON in this EXACT format (no markdown, 
   "recommendations": {
     "focusAreas": ["chest", "shoulders"],
     "workoutSplit": "Push/Pull/Legs 5-6x per week",
-    "nutritionTips": "Maintain slight caloric surplus for muscle gain, aim for 1.6g protein per kg bodyweight",
-    "progressGoals": "Gain 2-3kg lean muscle in 3 months, maintain or slightly reduce body fat"
+    "nutritionTips": "Increase protein to 1.8g/kg bodyweight for muscle development",
+    "progressGoals": "Target 1-2% body fat reduction while maintaining muscle mass"
   },
   "confidence": 0.75,
-  "notes": "Based on visible muscle definition and body composition. For most accurate results, use DEXA scan or professional body composition analysis."
-}`,
+  "notes": "Athletic assessment based on visible morphology"
+}
+
+Return ONLY valid JSON. No markdown formatting, no code blocks, no explanatory text. Start with { and end with }`,
         },
       ];
 
@@ -129,14 +142,26 @@ CRITICAL: Return your analysis as valid JSON in this EXACT format (no markdown, 
 
       const content = response.choices[0].message.content || '{}';
 
-      // Extract JSON from response (handle markdown code blocks if present)
-      let jsonMatch = content.match(/\{[\s\S]*\}/);
+      // 🐛 DEBUG: Log raw response to see what GPT-4o is actually returning
+      console.log('🔍 Raw GPT-4o Vision Response:', content.substring(0, 500) + (content.length > 500 ? '...' : ''));
+
+      // Extract JSON from response - handle multiple formats
+      // Try different patterns: markdown json block, markdown code block, or plain JSON
+      let jsonMatch =
+        content.match(/```json\s*(\{[\s\S]*?\})\s*```/) || // Markdown json block
+        content.match(/```\s*(\{[\s\S]*?\})\s*```/) ||     // Markdown code block
+        content.match(/(\{[\s\S]*\})/);                     // Plain JSON
 
       if (!jsonMatch) {
+        console.error('❌ Failed to extract JSON. Full response:', content);
         throw new Error('Could not extract JSON from vision API response');
       }
 
-      const bodyAnalysis: BodyScanResult = JSON.parse(jsonMatch[0]);
+      // Get the captured group (if exists) or the full match
+      const jsonString = jsonMatch[1] || jsonMatch[0];
+      console.log('✅ Extracted JSON string:', jsonString.substring(0, 200) + '...');
+
+      const bodyAnalysis: BodyScanResult = JSON.parse(jsonString);
 
       // Calculate unique mathematical Body Signature
       const bodySignature = this.calculateBodySignature(bodyAnalysis);
