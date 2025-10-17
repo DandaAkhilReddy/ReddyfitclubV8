@@ -14,24 +14,30 @@ class NutritionService {
   }
 
   /**
-   * Analyze meal from image using GPT-4 Vision
+   * Analyze meal from multiple images using GPT-4 Vision
    * (Groq doesn't support vision yet as of Jan 2025)
    */
-  async analyzeMealFromImage(imageBase64: string): Promise<NutritionData> {
+  async analyzeMealFromImage(imageBase64Array: string | string[]): Promise<NutritionData> {
     try {
-      // Use GPT-4 Vision for image analysis
-      const response = await this.openai.chat.completions.create({
-        model: 'gpt-4-vision-preview',
-        messages: [
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: `You are an expert nutritionist. Analyze this meal image and provide detailed nutritional information.
+      // Support both single image (backwards compatible) and multiple images
+      const images = Array.isArray(imageBase64Array) ? imageBase64Array : [imageBase64Array];
+      const photoCount = images.length;
 
-Identify all food items visible and estimate:
-1. Portion sizes
+      // Build content array with text prompt + all images
+      const contentArray: any[] = [
+        {
+          type: 'text',
+          text: `You are an expert nutritionist. ${photoCount > 1 ?
+            `Analyze ALL ${photoCount} photos of the same meal. These photos may show different angles, dishes, or items from the same meal.` :
+            'Analyze this meal image and provide detailed nutritional information.'}
+
+IMPORTANT:
+${photoCount > 1 ?
+  '- Look across ALL photos to identify all food items\n- Some photos may overlap or show the same items from different angles\n- Avoid double-counting items that appear in multiple photos\n- Combine your analysis into ONE comprehensive nutritional breakdown' :
+  '- Identify all food items visible in the image'}
+
+Identify all food items and estimate:
+1. Portion sizes (be as accurate as possible)
 2. Calories per item
 3. Macronutrients (protein, carbs, fats, fiber)
 4. Meal type (breakfast, lunch, dinner, snack)
@@ -59,34 +65,88 @@ Return your analysis as JSON in this exact format:
   "mealType": "lunch",
   "confidence": 0.8
 }`,
-              },
-              {
-                type: 'image_url',
-                image_url: {
-                  url: `data:image/jpeg;base64,${imageBase64}`,
-                },
-              },
-            ],
+        },
+      ];
+
+      // Add all images to the content array
+      images.forEach((imageBase64, index) => {
+        contentArray.push({
+          type: 'image_url',
+          image_url: {
+            url: `data:image/jpeg;base64,${imageBase64}`,
+            detail: 'high', // Request high-detail analysis
+          },
+        });
+      });
+
+      console.log(`🔍 Sending ${photoCount} photo${photoCount > 1 ? 's' : ''} to GPT-4o Vision for analysis...`);
+
+      // Use GPT-4o (with vision) for multi-image analysis in ONE API call
+      const response = await this.openai.chat.completions.create({
+        model: 'gpt-4o', // ✅ Already using gpt-4o (not deprecated gpt-4-vision-preview)
+        messages: [
+          {
+            role: 'user',
+            content: contentArray,
           },
         ],
-        max_tokens: 1000,
+        max_tokens: 1500, // Increased for multiple photos
       });
 
       const content = response.choices[0].message.content || '{}';
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
 
-      if (!jsonMatch) {
-        throw new Error('Could not extract JSON from vision API response');
+      // Multi-Strategy JSON Extraction (same as body.service.ts)
+      let nutritionData: NutritionData;
+
+      try {
+        // Strategy 1: Plain JSON
+        nutritionData = JSON.parse(content.trim());
+      } catch (e1) {
+        try {
+          // Strategy 2: Markdown JSON block
+          const jsonBlockMatch = content.match(/```json\s*([\s\S]*?)\s*```/);
+          if (jsonBlockMatch) {
+            nutritionData = JSON.parse(jsonBlockMatch[1].trim());
+          } else {
+            throw new Error('No markdown json block');
+          }
+        } catch (e2) {
+          try {
+            // Strategy 3: Markdown code block
+            const codeBlockMatch = content.match(/```\s*([\s\S]*?)\s*```/);
+            if (codeBlockMatch) {
+              nutritionData = JSON.parse(codeBlockMatch[1].trim());
+            } else {
+              throw new Error('No markdown code block');
+            }
+          } catch (e3) {
+            try {
+              // Strategy 4: Brace extraction
+              const firstBrace = content.indexOf('{');
+              const lastBrace = content.lastIndexOf('}');
+              if (firstBrace !== -1 && lastBrace !== -1) {
+                nutritionData = JSON.parse(content.substring(firstBrace, lastBrace + 1));
+              } else {
+                throw new Error('No JSON braces found');
+              }
+            } catch (e4) {
+              console.error('❌ All JSON extraction strategies failed for nutrition analysis');
+              console.error('Response:', content);
+              throw new Error('Could not extract JSON from vision API response');
+            }
+          }
+        }
       }
 
-      const nutritionData: NutritionData = JSON.parse(jsonMatch[0]);
+      console.log(`✅ GPT-4 Vision analysis complete: ${nutritionData.totalCalories} cal, ${nutritionData.foodItems.length} items identified`);
+
       return nutritionData;
     } catch (error) {
       console.error('Vision API Error:', error);
 
       // Fallback: Use Groq with manual description
       return this.analyzeMealFromDescription(
-        'Unable to analyze image. Please provide meal description.'
+        'Unable to analyze images. Please provide meal description.'
       );
     }
   }

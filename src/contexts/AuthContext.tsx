@@ -1,6 +1,7 @@
 import { createContext, useEffect, useState, ReactNode } from 'react';
+import type { User } from "firebase/auth";
 import {
-  User,
+
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signInWithPopup,
@@ -11,7 +12,7 @@ import {
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db, Collections } from '../lib/firebase';
-import { UserProfile } from '../types/user';
+import type { UserProfile } from '../types/user';
 
 interface AuthContextType {
   user: User | null;
@@ -48,6 +49,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const resetDate = new Date(now);
     resetDate.setMonth(resetDate.getMonth() + 1);
 
+    // AI Coach Trial: 30 days from signup
+    const aiCoachTrialStart = new Date(now);
+    const aiCoachTrialEnd = new Date(now);
+    aiCoachTrialEnd.setDate(aiCoachTrialEnd.getDate() + 30);
+
+    const aiCoachResetDate = new Date(now);
+    aiCoachResetDate.setMonth(aiCoachResetDate.getMonth() + 1);
+
     const defaultProfile: UserProfile = {
       uid: user.uid,
       email: user.email || '',
@@ -59,12 +68,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       scansUsed: 0,
       scansLimit: 4, // Free tier: 4 scans/month
       resetDate: resetDate,
+      // AI Coach Trial (30 days, unlimited usage)
+      aiCoachTrialStartDate: aiCoachTrialStart,
+      aiCoachTrialEndDate: aiCoachTrialEnd,
+      aiCoachUsageCount: 0,
+      aiCoachUsageLimit: 999999, // Unlimited during trial
+      aiCoachResetDate: aiCoachResetDate,
     };
 
     await setDoc(doc(db, Collections.USERS, user.uid), {
       ...defaultProfile,
       createdAt: serverTimestamp(),
       resetDate: resetDate.toISOString(),
+      aiCoachTrialStartDate: aiCoachTrialStart.toISOString(),
+      aiCoachTrialEndDate: aiCoachTrialEnd.toISOString(),
+      aiCoachResetDate: aiCoachResetDate.toISOString(),
     });
 
     return defaultProfile;
@@ -81,6 +99,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         createdAt: data.createdAt?.toDate?.() || new Date(),
         resetDate: new Date(data.resetDate),
         subscriptionEndDate: data.subscriptionEndDate ? new Date(data.subscriptionEndDate) : undefined,
+        // AI Coach Trial dates
+        aiCoachTrialStartDate: data.aiCoachTrialStartDate ? new Date(data.aiCoachTrialStartDate) : undefined,
+        aiCoachTrialEndDate: data.aiCoachTrialEndDate ? new Date(data.aiCoachTrialEndDate) : undefined,
+        aiCoachResetDate: data.aiCoachResetDate ? new Date(data.aiCoachResetDate) : new Date(),
+        // Default AI Coach fields for existing users (backward compatibility)
+        aiCoachUsageCount: data.aiCoachUsageCount ?? 0,
+        aiCoachUsageLimit: data.aiCoachUsageLimit ?? 10, // Free tier default
       } as UserProfile;
     }
 

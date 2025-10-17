@@ -1,5 +1,5 @@
 // Nutrition Analysis Display Component
-import { NutritionData } from '../../services/ai-api';
+import type { NutritionData } from '../../services/ai-api';
 import './AICoach.css';
 
 interface NutritionAnalysisProps {

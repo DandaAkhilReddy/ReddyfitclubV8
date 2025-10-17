@@ -11,6 +11,8 @@ const plans = [
     description: 'Perfect for getting started',
     features: [
       '4 body scans per month',
+      '10 AI Coach analyses/month',
+      '30-day AI Coach trial',
       'Basic AI analysis',
       'Body composition metrics',
       'Progress tracking',
@@ -32,6 +34,8 @@ const plans = [
     description: 'For serious fitness enthusiasts',
     features: [
       'Unlimited body scans',
+      '100 AI Coach analyses/month',
+      '30-day AI Coach trial',
       'Advanced AI analysis',
       'Personalized meal plans',
       'Custom workout programs',
@@ -53,6 +57,7 @@ const plans = [
     description: 'Ultimate transformation package',
     features: [
       'Everything in Pro',
+      'Unlimited AI Coach analyses',
       'Save 2 months (vs monthly)',
       '1-on-1 consultation (quarterly)',
       'Early access to new features',

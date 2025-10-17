@@ -4,7 +4,8 @@ import { CheckCircle, Loader2 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { doc, setDoc } from 'firebase/firestore';
 import { db, Collections } from '../lib/firebase';
-import { ScanResult } from '../types/user';
+import type { ScanResult } from '../types/user';
+import { analyzeBody } from '../services/body-api';
 
 interface ProcessingStep {
   id: string;
@@ -17,16 +18,15 @@ export function ScanProcessing() {
   const navigate = useNavigate();
   const { userProfile } = useAuth();
 
-  const { frontUrl, timestamp } = location.state || {};
+  const { frontUrl, sideUrl, backUrl, timestamp } = location.state || {};
 
   const [steps, setSteps] = useState<ProcessingStep[]>([
     { id: 'upload', label: 'Uploading images', status: 'complete' },
-    { id: 'qc', label: 'Quality check', status: 'processing' },
-    { id: 'estimation', label: 'Body composition estimation', status: 'pending' },
-    { id: 'deltas', label: 'Comparing with history', status: 'pending' },
-    { id: 'insights', label: 'Generating insights', status: 'pending' },
-    { id: 'nutrition', label: 'Creating meal plan', status: 'pending' },
-    { id: 'workout', label: 'Designing workout plan', status: 'pending' },
+    { id: 'api', label: 'Analyzing with GPT-4o Vision', status: 'processing' },
+    { id: 'signature', label: 'Calculating Body Signature', status: 'pending' },
+    { id: 'measurements', label: 'Extracting body measurements', status: 'pending' },
+    { id: 'insights', label: 'Generating AI insights', status: 'pending' },
+    { id: 'save', label: 'Saving results', status: 'pending' },
   ]);
 
   const [currentStepIndex, setCurrentStepIndex] = useState(1);
@@ -38,78 +38,120 @@ export function ScanProcessing() {
       return;
     }
 
-    // Simulate processing steps
-    const interval = setInterval(() => {
-      setCurrentStepIndex((prev) => {
-        if (prev >= steps.length - 1) {
-          clearInterval(interval);
-          // Processing complete, create scan record
-          createScanRecord();
-          return prev;
-        }
-
-        // Update current step to complete
-        setSteps((prevSteps) => {
-          const newSteps = [...prevSteps];
-          newSteps[prev].status = 'complete';
-          if (prev + 1 < newSteps.length) {
-            newSteps[prev + 1].status = 'processing';
-          }
-          return newSteps;
-        });
-
-        return prev + 1;
-      });
-    }, 2000); // Each step takes 2 seconds
-
-    return () => clearInterval(interval);
+    // Call real API
+    processBodyScan();
   }, [frontUrl, userProfile]);
 
-  const createScanRecord = async () => {
+  const updateStep = (stepIndex: number) => {
+    setSteps((prevSteps) => {
+      const newSteps = [...prevSteps];
+      // Mark previous steps as complete
+      for (let i = 0; i <= stepIndex; i++) {
+        newSteps[i].status = 'complete';
+      }
+      // Mark current step as processing
+      if (stepIndex + 1 < newSteps.length) {
+        newSteps[stepIndex + 1].status = 'processing';
+      }
+      return newSteps;
+    });
+    setCurrentStepIndex(stepIndex);
+  };
+
+  const processBodyScan = async () => {
     if (!userProfile) return;
 
-    const scanId = `scan_${timestamp}`;
-    setScanId(scanId);
-
-    // Create mock scan result (in production, this would come from Gemini API)
-    const mockResult: ScanResult = {
-      id: scanId,
-      userId: userProfile.uid,
-      timestamp: new Date(timestamp),
-      bodyFatPercentage: 18.5,
-      muscleMass: 68.2,
-      visceralFat: 6.5,
-      chestCm: 102,
-      waistCm: 85,
-      hipsCm: 98,
-      armsCm: 35,
-      thighsCm: 58,
-      insights: [
-        'Your body fat percentage is in the athletic range',
-        'Muscle mass is above average for your demographics',
-        'Visceral fat levels are healthy - keep it up!',
-      ],
-      recommendations: {
-        nutrition: 'Aim for 2,200 calories/day with 40% protein, 30% carbs, 30% fats. Focus on lean proteins and complex carbs.',
-        workout: '4-5 days of strength training per week. Mix compound movements with isolation exercises. Add 2 cardio sessions.',
-        hydration: 'Drink 3-4 liters of water daily. Increase intake on workout days.',
-      },
-      frontImageUrl: frontUrl,
-    };
-
     try {
-      // Save to Firestore
-      await setDoc(doc(db, Collections.SCANS, scanId), {
-        ...mockResult,
-        timestamp: mockResult.timestamp.toISOString(),
+      // Step 1: Analyzing with GPT-4o Vision (already showing)
+      console.log('🏋️ Starting body scan analysis...');
+
+      // Build array of image URLs to analyze
+      const imageUrls = [frontUrl];
+      if (sideUrl) imageUrls.push(sideUrl);
+      if (backUrl) imageUrls.push(backUrl);
+
+      console.log(`📸 Analyzing ${imageUrls.length} photo(s)...`);
+
+      // Call real API
+      const response = await analyzeBody(imageUrls, userProfile.uid, {
+        includeWorkoutPlan: false, // Can enable later
+        includeNutritionPlan: false,
+        goal: userProfile.fitnessGoal === 'lose_weight' ? 'lose_fat' :
+              userProfile.fitnessGoal === 'build_muscle' ? 'gain_muscle' : 'maintain',
       });
 
-      // Wait 1 second then navigate to results
+      // Step 2: Body Signature calculated (part of API response)
+      updateStep(1);
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Step 3: Measurements extracted
+      updateStep(2);
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Step 4: Insights generated
+      updateStep(3);
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Step 5: Saving results
+      updateStep(4);
+
+      const scanId = `scan_${timestamp}`;
+      setScanId(scanId);
+
+      // Map API response to ScanResult interface
+      const scanResult: ScanResult = {
+        id: scanId,
+        userId: userProfile.uid,
+        timestamp: new Date(timestamp),
+        bodyFatPercentage: response.scanResult.bodyFatPercentage,
+        muscleMassLevel: response.scanResult.muscleMassLevel,
+        physiqueRating: response.scanResult.physiqueRating,
+        measurements: response.scanResult.measurements,
+        posture: response.scanResult.posture,
+        fitnessLevel: response.scanResult.fitnessLevel,
+        muscleDevelopment: response.scanResult.muscleDevelopment,
+        recommendations: response.scanResult.recommendations,
+        confidence: response.scanResult.confidence,
+        notes: response.scanResult.notes,
+        bodySignature: response.scanResult.bodySignature,
+        workoutPlan: response.workoutPlan,
+        nutritionPlan: response.nutritionPlan,
+        frontImageUrl: frontUrl,
+        sideImageUrl: sideUrl,
+        backImageUrl: backUrl,
+        // Legacy fields for backward compatibility
+        muscleMass: response.scanResult.muscleMassLevel === 'high' ? 70 :
+                    response.scanResult.muscleMassLevel === 'moderate' ? 60 : 50,
+        chestCm: response.scanResult.measurements?.chestCm,
+        waistCm: response.scanResult.measurements?.waistCm,
+        hipsCm: response.scanResult.measurements?.hipsCm,
+        insights: [
+          `Body Fat: ${response.scanResult.bodyFatPercentage}%`,
+          `Fitness Level: ${response.scanResult.fitnessLevel}`,
+          `Body Type: ${response.scanResult.bodySignature?.bodyTypeClassification || 'N/A'}`,
+        ],
+      };
+
+      // Save to Firestore
+      await setDoc(doc(db, Collections.SCANS, scanId), {
+        ...scanResult,
+        timestamp: scanResult.timestamp.toISOString(),
+      });
+
+      console.log('✅ Body scan complete!');
+      console.log(`🔬 Body Signature: ${response.scanResult.bodySignature?.uniqueId}`);
+
+      // Mark all steps complete
+      updateStep(steps.length - 1);
+
+      // Wait then navigate to results
       setTimeout(() => {
         navigate(`/scan/results/${scanId}`);
       }, 1000);
-    } catch (error) {
-      console.error('Error saving scan:', error);
+    } catch (error: any) {
+      console.error('Body scan analysis error:', error);
+      alert(`Analysis failed: ${error.message}. Please try again.`);
+      navigate('/scan');
     }
   };
 

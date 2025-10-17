@@ -2,9 +2,12 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { doc, getDoc } from 'firebase/firestore';
 import { db, Collections } from '../lib/firebase';
-import { ScanResult } from '../types/user';
+import type { ScanResult } from '../types/user';
 import { TrendingUp, TrendingDown, Activity, Droplet, Apple, Dumbbell, ArrowRight } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { BodySignatureCard } from '../components/BodySignatureCard';
+import { MeasurementsGrid } from '../components/MeasurementsGrid';
+import { MetricsGauge } from '../components/MetricsGauge';
 
 export function ScanResults() {
   const { scanId } = useParams<{ scanId: string }>();
@@ -105,41 +108,49 @@ export function ScanResults() {
           </p>
         </div>
 
-        {/* Body Composition Metrics */}
-        <div className="grid md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-700">Body Fat</h3>
-              <TrendingDown className="w-6 h-6 text-green-600" />
-            </div>
-            <div className="text-4xl font-bold text-gray-900 mb-2">
-              {scan.bodyFatPercentage}%
-            </div>
-            <p className="text-sm text-green-600">↓ 2.3% from last month</p>
+        {/* Body Signature - Highlighted Section */}
+        {scan.bodySignature && (
+          <div className="mb-8">
+            <BodySignatureCard bodySignature={scan.bodySignature} />
           </div>
+        )}
 
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-700">Muscle Mass</h3>
-              <TrendingUp className="w-6 h-6 text-blue-600" />
-            </div>
-            <div className="text-4xl font-bold text-gray-900 mb-2">
-              {scan.muscleMass} kg
-            </div>
-            <p className="text-sm text-blue-600">↑ 3.1 kg from last month</p>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-700">Visceral Fat</h3>
-              <Activity className="w-6 h-6 text-yellow-600" />
-            </div>
-            <div className="text-4xl font-bold text-gray-900 mb-2">
-              {scan.visceralFat}
-            </div>
-            <p className="text-sm text-gray-500">Healthy range</p>
+        {/* Body Composition Metrics with Gauges */}
+        <div className="bg-white rounded-xl shadow-md p-8 mb-8">
+          <h3 className="text-2xl font-bold text-gray-900 mb-6">Body Composition</h3>
+          <div className="grid md:grid-cols-3 gap-8">
+            <MetricsGauge
+              value={scan.bodyFatPercentage}
+              maxValue={50}
+              label="Body Fat Percentage"
+              unit="%"
+              color="red"
+              size="lg"
+            />
+            <MetricsGauge
+              value={scan.muscleMass || 0}
+              maxValue={100}
+              label="Muscle Mass"
+              unit=" kg"
+              color="blue"
+              size="lg"
+            />
+            <MetricsGauge
+              value={scan.visceralFat || 0}
+              maxValue={20}
+              label="Visceral Fat"
+              color="yellow"
+              size="lg"
+            />
           </div>
         </div>
+
+        {/* Body Measurements */}
+        {scan.measurements && (
+          <div className="mb-8">
+            <MeasurementsGrid measurements={scan.measurements} />
+          </div>
+        )}
 
         {/* Progress Chart */}
         <div className="bg-white rounded-xl shadow-md p-6 mb-8">

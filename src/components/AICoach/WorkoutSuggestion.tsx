@@ -1,6 +1,6 @@
 // Workout Suggestion Display Component
 import { useState } from 'react';
-import { WorkoutPlan } from '../../services/ai-api';
+import type { WorkoutPlan } from '../../services/ai-api';
 import './AICoach.css';
 
 interface WorkoutSuggestionProps {

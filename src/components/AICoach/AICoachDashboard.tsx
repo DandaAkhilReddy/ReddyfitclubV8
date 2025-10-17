@@ -1,12 +1,20 @@
 // Main AI Coach Dashboard
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import MealUpload from './MealUpload';
 import NutritionAnalysis from './NutritionAnalysis';
 import WorkoutSuggestion from './WorkoutSuggestion';
-import aiApi, { AICoachResponse } from '../../services/ai-api';
+import TrialBanner from './TrialBanner';
+import type { AICoachResponse } from '../../services/ai-api';
+import aiApi from '../../services/ai-api';
+import { useAICoachAccess } from '../../hooks/useAICoachAccess';
+import { useAuth } from '../../hooks/useAuth';
 import './AICoach.css';
 
 export default function AICoachDashboard() {
+  const { user, userProfile } = useAuth();
+  const { isInTrial, daysRemaining, usageCount, usageLimit, usagePercentage, canUse, recordUsage } =
+    useAICoachAccess();
+
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AICoachResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -15,30 +23,63 @@ export default function AICoachDashboard() {
   // Meal description input
   const [mealDescription, setMealDescription] = useState('');
 
-  // Get user ID from auth context (placeholder - adjust based on your auth system)
-  const userId = 'user123'; // TODO: Get from your auth context
+  // Get user ID from auth
+  const userId = user?.uid || 'guest';
 
-  const handleImageAnalysis = async (imageFile: File) => {
+  const handleImageAnalysis = useCallback(async (imageFiles: File[]) => {
+    console.log('🔍 [AICoachDashboard] handleImageAnalysis called with', imageFiles.length, 'files');
+
+    // Check if user can use AI Coach
+    if (!canUse) {
+      setError(
+        `You've reached your AI Coach limit (${usageLimit} analyses/month). Upgrade your plan for more!`
+      );
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
     try {
-      console.log('📸 Analyzing meal image...');
-      const response = await aiApi.analyzeMealFromImage(imageFile, userId);
+      const photoCount = imageFiles.length;
+      console.log(`📸 Analyzing ${photoCount} meal photo${photoCount > 1 ? 's' : ''}...`);
+      const response = await aiApi.analyzeMealFromImage(imageFiles, userId);
+      console.log('✅ [AICoachDashboard] API response received:', response);
+
+      // Record usage - but don't fail the entire flow if this fails
+      try {
+        console.log('🔍 [AICoachDashboard] Recording usage...');
+        await recordUsage();
+        console.log('✅ [AICoachDashboard] Usage recorded successfully');
+      } catch (usageErr: any) {
+        console.error('⚠️ [AICoachDashboard] Failed to record usage:', usageErr);
+        // Don't throw - still show the result to the user
+      }
 
       setResult(response);
       console.log('✅ Analysis complete!', response);
     } catch (err: any) {
-      console.error('Analysis failed:', err);
-      setError(err.response?.data?.message || 'Failed to analyze meal. Please try again.');
+      console.error('❌ [AICoachDashboard] Analysis failed:', err);
+      const errorMessage = err.response?.data?.message || err.message || 'Failed to analyze meal';
+      setError(`Analysis failed: ${errorMessage}. Please try again or use text description instead.`);
     } finally {
       setLoading(false);
     }
-  };
+  }, [canUse, usageLimit, userId, recordUsage]);
 
-  const handleTextAnalysis = async () => {
+  const handleTextAnalysis = useCallback(async () => {
     if (!mealDescription.trim()) {
       setError('Please enter a meal description');
+      return;
+    }
+
+    console.log('🔍 [AICoachDashboard] handleTextAnalysis called');
+
+    // Check if user can use AI Coach
+    if (!canUse) {
+      setError(
+        `You've reached your AI Coach limit (${usageLimit} analyses/month). Upgrade your plan for more!`
+      );
       return;
     }
 
@@ -48,31 +89,55 @@ export default function AICoachDashboard() {
     try {
       console.log('📝 Analyzing meal description...');
       const response = await aiApi.analyzeMealFromDescription(mealDescription, userId);
+      console.log('✅ [AICoachDashboard] API response received:', response);
+
+      // Record usage - but don't fail the entire flow if this fails
+      try {
+        console.log('🔍 [AICoachDashboard] Recording usage...');
+        await recordUsage();
+        console.log('✅ [AICoachDashboard] Usage recorded successfully');
+      } catch (usageErr: any) {
+        console.error('⚠️ [AICoachDashboard] Failed to record usage:', usageErr);
+        // Don't throw - still show the result to the user
+      }
 
       setResult(response);
       console.log('✅ Analysis complete!', response);
     } catch (err: any) {
-      console.error('Analysis failed:', err);
-      setError(err.response?.data?.message || 'Failed to analyze meal. Please try again.');
+      console.error('❌ [AICoachDashboard] Analysis failed:', err);
+      const errorMessage = err.response?.data?.message || err.message || 'Failed to analyze meal';
+      setError(`Analysis failed: ${errorMessage}. Please try again or use text description instead.`);
     } finally {
       setLoading(false);
     }
-  };
+  }, [canUse, usageLimit, mealDescription, userId, recordUsage]);
 
-  const handleNewAnalysis = () => {
+  const handleNewAnalysis = useCallback(() => {
     setResult(null);
     setError(null);
     setMealDescription('');
-  };
+  }, []);
 
   return (
     <div className="ai-coach-dashboard">
       <header className="dashboard-header">
         <h1>🤖 AI Fitness Coach</h1>
         <p className="dashboard-subtitle">
-          Upload your meal photo and get instant nutrition analysis + personalized workout plan
+          Upload or capture up to 10 meal photos for accurate nutrition analysis + personalized workout plan
         </p>
       </header>
+
+      {/* Trial Banner */}
+      {userProfile && (
+        <TrialBanner
+          isInTrial={isInTrial}
+          daysRemaining={daysRemaining}
+          usageCount={usageCount}
+          usageLimit={usageLimit}
+          usagePercentage={usagePercentage}
+          subscription={userProfile.subscription}
+        />
+      )}
 
       {!result ? (
         <div className="input-section">
